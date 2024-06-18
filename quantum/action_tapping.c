@@ -6,6 +6,7 @@
 #include "action_tapping.h"
 #include "keycode.h"
 #include "timer.h"
+#include <stdio.h>
 
 #ifndef NO_ACTION_TAPPING
 
@@ -78,12 +79,37 @@ static void debug_waiting_buffer(void);
  * FIXME: Needs doc
  */
 void action_tapping_process(keyrecord_t record) {
+
+    // ここはオッケー
+    /*
+    > action_tapping_process record.type: 2
+    > action_tapping_process record.time: 14677
+    > action_tapping_process record.key: (253 3)
+    > action_tapping_process record.pressed: 1
+    */
+    // if (record.event.type == 2 || record.event.type == 3) {
+    //     printf("action_tapping_process record.type: %d\n", record.event.type);
+    //     printf("action_tapping_process record.time: %d\n", record.event.time);
+    //     printf("action_tapping_process record.key: (%d %d)\n", record.event.key.row, record.event.key.col);
+    //     printf("action_tapping_process record.pressed: %d\n", record.event.pressed);
+    // }
+
+
     if (process_tapping(&record)) {
         if (IS_EVENT(record.event)) {
             ac_dprintf("processed: ");
             debug_record(record);
             ac_dprintf("\n");
+            if (record.event.type == 2 || record.event.type == 3) {
+                // ここにはいる
+                printf("k");
+            }
+        } else {
+            if (record.event.type == 2 || record.event.type == 3) {
+                printf("i");
+            }
         }
+
     } else {
         if (!waiting_buffer_enq(record)) {
             // clear all in case of overflow.
@@ -91,6 +117,13 @@ void action_tapping_process(keyrecord_t record) {
             clear_keyboard();
             waiting_buffer_clear();
             tapping_key = (keyrecord_t){0};
+            if (record.event.type == 2 || record.event.type == 3) {
+                printf("g");
+            }
+        } else {
+            if (record.event.type == 2 || record.event.type == 3) {
+                printf("a");
+            }
         }
     }
 
@@ -103,7 +136,13 @@ void action_tapping_process(keyrecord_t record) {
             ac_dprintf("processed: waiting_buffer[%u] =", waiting_buffer_tail);
             debug_record(waiting_buffer[waiting_buffer_tail]);
             ac_dprintf("\n\n");
+            if (record.event.type == 2 || record.event.type == 3) {
+                printf("c");
+            }
         } else {
+            if (record.event.type == 2 || record.event.type == 3) {
+                printf("b");
+            }
             break;
         }
     }
@@ -185,12 +224,25 @@ bool process_tapping(keyrecord_t *keyp) {
             process_record(keyp);
         }
 
+
+
+        if (event.type == 2 || event.type == 3) {
+            printf("process_tapping record.type: %d\n", event.type);
+//            printf("process_tapping record.time: %d\n", event.time);
+//            printf("process_tapping record.key: (%d %d)\n", event.key.row, event.key.col);
+//            printf("process_tapping record.pressed: %d\n", event.pressed);
+        }
+
+        // ここで終わってる???
         return true;
     }
 
 #    if (defined(AUTO_SHIFT_ENABLE) && defined(RETRO_SHIFT)) || defined(PERMISSIVE_HOLD_PER_KEY) || defined(HOLD_ON_OTHER_KEY_PRESS_PER_KEY)
     TAP_DEFINE_KEYCODE;
 #    endif
+// ここに来ない。。。。！！！
+//  printf("%04X%c(%u)", (event.key.row << 8 | event.key.col), (event.pressed ? 'd' : 'u'), event.time);
+    printf("%04X%c(%u)", (tapping_key.event.key.row << 8 | tapping_key.event.key.col), (tapping_key.event.pressed ? 'd' : 'u'), tapping_key.event.time);
 
     // process "pressed" tapping key state
     if (tapping_key.event.pressed) {

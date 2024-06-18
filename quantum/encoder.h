@@ -22,7 +22,7 @@
 #include "gpio.h"
 #include "util.h"
 
-#ifdef ENCODER_ENABLE
+
 
 __attribute__((weak)) bool should_process_encoder(void);
 
@@ -100,15 +100,14 @@ bool encoder_dequeue_event_advanced(encoder_events_t *events, uint8_t *index, bo
 // Reset the queue to be empty
 void encoder_signal_queue_drain(void);
 
-#    ifdef ENCODER_MAP_ENABLE
+
 #        define NUM_DIRECTIONS 2
 #        define ENCODER_CCW_CW(ccw, cw) \
             { (cw), (ccw) }
 extern const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS];
-#    endif // ENCODER_MAP_ENABLE
+
 
 // "Custom encoder lite" support
 void encoder_driver_init(void);
 void encoder_driver_task(void);
 
-#endif // ENCODER_ENABLE

@@ -9,6 +9,7 @@
 #include "action.h"
 #include "keycodes.h"
 #include "wait.h"
+#include <stdio.h>
 
 #ifdef SPLIT_KEYBOARD
 #    include "split_util.h"
@@ -161,53 +162,64 @@ void encoder_driver_init(void) {
 static void encoder_handle_state_change(uint8_t index, uint8_t state) {
     uint8_t i = index;
 
-#ifdef SPLIT_KEYBOARD
-    index += thisHand;
-#endif
-
-#ifdef ENCODER_RESOLUTIONS
-    const uint8_t resolution = encoder_resolutions[index];
-#else
     const uint8_t resolution = ENCODER_RESOLUTION;
-#endif
+
+    // static int8_t encoder_LUT[] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
 
     encoder_pulses[i] += encoder_LUT[state & 0xF];
 
-#ifdef ENCODER_DEFAULT_POS
-    if ((encoder_pulses[i] >= resolution) || (encoder_pulses[i] <= -resolution) || ((state & 0x3) == ENCODER_DEFAULT_POS)) {
-        if (encoder_pulses[i] >= 1) {
-#else
     if (encoder_pulses[i] >= resolution) {
-#endif
-
-            encoder_queue_event(index, ENCODER_COUNTER_CLOCKWISE);
-        }
-
-#ifdef ENCODER_DEFAULT_POS
-        if (encoder_pulses[i] <= -1) {
-#else
-    if (encoder_pulses[i] <= -resolution) { // direction is arbitrary here, but this clockwise
-#endif
-            encoder_queue_event(index, ENCODER_CLOCKWISE);
-        }
-        encoder_pulses[i] %= resolution;
-#ifdef ENCODER_DEFAULT_POS
-        encoder_pulses[i] = 0;
+        encoder_queue_event(index, ENCODER_COUNTER_CLOCKWISE);
     }
-#endif
+
+    // direction is arbitrary here, but this clockwise
+    if (encoder_pulses[i] <= -resolution) {
+        encoder_queue_event(index, ENCODER_CLOCKWISE);
+    }
+    encoder_pulses[i] %= resolution;
+
 }
 
+/*
+
+2ビットで表現される状態
+
+↓ 時計回り
+
+二 十
+-----
+00 0
+01 1
+11 3
+10 2
+
+↑ 反時計回り
+
+ */
 void encoder_quadrature_handle_read(uint8_t index, uint8_t pin_a_state, uint8_t pin_b_state) {
-    uint8_t state = pin_a_state | (pin_b_state << 1);
+
+    // 2ビットの状態を作成する ビット的には ba の形になる。
+    uint8_t state = (pin_a_state << 0) | (pin_b_state << 1);
+
+    // (encoder_state[index] & 0x3) が記録されている最後の状態。stateが今の状態
     if ((encoder_state[index] & 0x3) != state) {
+
+        //printf("<eqhr> %d is before %d, will state: %d\n", index, (encoder_state[index] & 0x3), (state & 0x3));
+
+        // 左に2ビットシフトして、新しいのを入れられるようにする
         encoder_state[index] <<= 2;
+
+        // 空いたところの2ビットに新しい状態を保存する
         encoder_state[index] |= state;
+
+        // イベントを発火
         encoder_handle_state_change(index, encoder_state[index]);
     }
 }
 
 __attribute__((weak)) void encoder_driver_task(void) {
     for (uint8_t i = 0; i < thisCount; i++) {
+        // Planck側 matrix.c で定義されている
         encoder_quadrature_handle_read(i, encoder_quadrature_read_pin(i, false), encoder_quadrature_read_pin(i, true));
     }
 }

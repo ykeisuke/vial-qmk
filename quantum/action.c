@@ -72,14 +72,26 @@ __attribute__((weak)) bool get_retro_tapping(uint16_t keycode, keyrecord_t *reco
  * FIXME: Needs documentation.
  */
 void action_exec(keyevent_t event) {
+    /*
+    > sample.type: 2
+    > sample.time: 27710
+    > sample.key: (3 253)
+    > sample.pressed: 1
+    */
+    // ここには入ってきている
+    // if (event.type == 2 || event.type == 3) {
+    //     printf("> action_exec.type: %d\n", event.type);
+    //     printf("> action_exec.time: %d\n", event.time);
+    //     printf("> action_exec.key: (%d %d)\n", event.key.row, event.key.col);
+    //     printf("> action_exec.pressed: %d\n", event.pressed);
+    // }
+
+
     if (IS_EVENT(event)) {
         ac_dprintf("\n---- action_exec: start -----\n");
         ac_dprintf("EVENT: ");
         debug_event(event);
         ac_dprintf("\n");
-#if defined(RETRO_TAPPING) || defined(RETRO_TAPPING_PER_KEY) || (defined(AUTO_SHIFT_ENABLE) && defined(RETRO_SHIFT))
-        retro_tapping_counter++;
-#endif
     }
 
     if (event.pressed) {
@@ -87,52 +99,27 @@ void action_exec(keyevent_t event) {
         clear_weak_mods();
     }
 
-#ifdef SWAP_HANDS_ENABLE
-    // Swap hands handles both keys and encoders, if ENCODER_MAP_ENABLE is defined.
-    if (IS_EVENT(event)) {
-        process_hand_swap(&event);
-    }
-#endif
 
     keyrecord_t record = {.event = event};
 
 #ifndef NO_ACTION_ONESHOT
     if (keymap_config.oneshot_enable) {
-if (QS_oneshot_timeout > 0) {
-        if (has_oneshot_layer_timed_out()) {
-            clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+        if (QS_oneshot_timeout > 0) {
+            if (has_oneshot_layer_timed_out()) {
+                clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+            }
+            if (has_oneshot_mods_timed_out()) {
+                clear_oneshot_mods();
+            }
         }
-        if (has_oneshot_mods_timed_out()) {
-            clear_oneshot_mods();
-        }
-#        ifdef SWAP_HANDS_ENABLE
-        if (has_oneshot_swaphands_timed_out()) {
-            clear_oneshot_swaphands();
-        }
-#        endif
-}
     }
 #endif
 
-#ifndef NO_ACTION_TAPPING
-#    if defined(AUTO_SHIFT_ENABLE) && defined(RETRO_SHIFT)
-    if (event.pressed) {
-        retroshift_poll_time(&event);
-    }
-#    endif
     if (IS_NOEVENT(record.event) || pre_process_record_quantum(&record)) {
+        // printf("col,row: %d,%d. time: %d\n", record.event.key.col, record.event.key.row, record.event.time);
         action_tapping_process(record);
     }
-#else
-    if (IS_NOEVENT(record.event) || pre_process_record_quantum(&record)) {
-        process_record(&record);
-    }
-    if (IS_EVENT(record.event)) {
-        ac_dprintf("processed: ");
-        debug_record(record);
-        dprintln();
-    }
-#endif
+
 }
 
 #ifdef SWAP_HANDS_ENABLE
@@ -271,6 +258,8 @@ void process_record(keyrecord_t *record) {
     if (IS_NOEVENT(record->event)) {
         return;
     }
+
+//    printf("process_record\n");
 
     if (!process_record_quantum(record)) {
 #ifndef NO_ACTION_ONESHOT
@@ -1121,6 +1110,9 @@ bool is_tap_record(keyrecord_t *record) {
 #else
     action_t action = layer_switch_get_action(record->event.key);
 #endif
+
+    printf("is_tap_record action.code: %d\n", action.code);
+
     return is_tap_action(action);
 }
 

@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "debug.h"
 #include "keycode_config.h"
 #include "quantum_keycodes.h"
+#include <stdio.h>
 
 #ifdef ENCODER_MAP_ENABLE
 #    include "encoder.h"
@@ -53,6 +54,9 @@ extern keymap_config_t keymap_config;
 action_t action_for_key(uint8_t layer, keypos_t key) {
     // 16bit keycodes - important
     uint16_t keycode = keymap_key_to_keycode(layer, key);
+
+    printf("keymap_common.c: action_for_key: %d\n", keycode);
+
     return action_for_keycode(keycode);
 };
 
@@ -214,13 +218,21 @@ __attribute__((weak)) uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key
     if (key.row < MATRIX_ROWS && key.col < MATRIX_COLS) {
         return keycode_at_keymap_location(layer, key.row, key.col);
     }
-#ifdef ENCODER_MAP_ENABLE
+
+
+
+
     else if (key.row == KEYLOC_ENCODER_CW && key.col < NUM_ENCODERS) {
+
+        printf("keymap_key_to_keycode CW: %d\n", keycode_at_encodermap_location(layer, key.col, true));
         return keycode_at_encodermap_location(layer, key.col, true);
     } else if (key.row == KEYLOC_ENCODER_CCW && key.col < NUM_ENCODERS) {
+        printf("keymap_key_to_keycode CCW: %d\n", keycode_at_encodermap_location(layer, key.col, false));
         return keycode_at_encodermap_location(layer, key.col, false);
     }
-#endif // ENCODER_MAP_ENABLE
+
+
+
 #ifdef DIP_SWITCH_MAP_ENABLE
     else if (key.row == KEYLOC_DIP_SWITCH_ON && key.col < NUM_DIP_SWITCHES) {
         return keycode_at_dip_switch_map_location(key.col, true);

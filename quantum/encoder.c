@@ -5,6 +5,8 @@
 #include "action.h"
 #include "encoder.h"
 #include "wait.h"
+#include <stdio.h>
+#include "keyboard.h"
 
 #ifndef ENCODER_MAP_KEY_DELAY
 #    define ENCODER_MAP_KEY_DELAY TAP_CODE_DELAY
@@ -32,24 +34,34 @@ static bool encoder_handle_queue(void) {
     uint8_t index;
     bool    clockwise;
     while (encoder_dequeue_event(&index, &clockwise)) {
-#ifdef ENCODER_MAP_ENABLE
+//        printf("encoder_handle_queue.while.ENCODER_MAP_ENABLE index: %d, clockwise: %d\n", index, clockwise);
 
+
+        // action_exec(MAKE_ENCODER_CCW_EVENT(3, true));
+        // wait_ms(10);
+        // action_exec(MAKE_ENCODER_CCW_EVENT(0, false));
+        // wait_ms(10);
+
+// ここから以下が動かない。
         // The delays below cater for Windows and its wonderful requirements.
+// 動かないのでコメントアウト
         action_exec(clockwise ? MAKE_ENCODER_CW_EVENT(index, true) : MAKE_ENCODER_CCW_EVENT(index, true));
 #    if ENCODER_MAP_KEY_DELAY > 0
         wait_ms(ENCODER_MAP_KEY_DELAY);
 #    endif // ENCODER_MAP_KEY_DELAY > 0
-
-        action_exec(clockwise ? MAKE_ENCODER_CW_EVENT(index, false) : MAKE_ENCODER_CCW_EVENT(index, false));
+// 動かないのでコメントアウト
+         action_exec(clockwise ? MAKE_ENCODER_CW_EVENT(index, false) : MAKE_ENCODER_CCW_EVENT(index, false));
 #    if ENCODER_MAP_KEY_DELAY > 0
         wait_ms(ENCODER_MAP_KEY_DELAY);
 #    endif // ENCODER_MAP_KEY_DELAY > 0
+// ここまで
 
-#else // ENCODER_MAP_ENABLE
 
-        encoder_update_kb(index, clockwise);
+        // printf("encoder_handle_queue.while. to encoder_update_kb index: %d, clockwise: %d\n", index, clockwise);
+        // ここが動いているから、音量が変わったりとかしている。
+        // encoder_update_kb(index, clockwise);
 
-#endif // ENCODER_MAP_ENABLE
+
 
         changed = true;
     }
@@ -108,6 +120,8 @@ bool encoder_queue_event_advanced(encoder_events_t *events, uint8_t index, bool 
     encoder_event_t new_event   = {.index = index, .clockwise = clockwise ? 1 : 0};
     events->queue[events->head] = new_event;
 
+    //printf("encoder_queue_event_advanced index: %d, clockwise: %d\n", index, clockwise);
+
     // Increment the head index
     events->head = (events->head + 1) % MAX_QUEUED_ENCODER_EVENTS;
     events->enqueued++;
@@ -124,6 +138,8 @@ bool encoder_dequeue_event_advanced(encoder_events_t *events, uint8_t *index, bo
     encoder_event_t event = events->queue[events->tail];
     *index                = event.index;
     *clockwise            = event.clockwise;
+
+    //printf("encoder_dequeue_event_advanced index: %d, clockwise: %d\n", *index, *clockwise);
 
     // Increment the tail index
     events->tail = (events->tail + 1) % MAX_QUEUED_ENCODER_EVENTS;
@@ -149,10 +165,14 @@ void encoder_signal_queue_drain(void) {
 }
 
 __attribute__((weak)) bool encoder_update_user(uint8_t index, bool clockwise) {
+    printf("encoder_update_user index: %d, clockwise: %d\n", index, clockwise);
     return true;
 }
 
 __attribute__((weak)) bool encoder_update_kb(uint8_t index, bool clockwise) {
+    printf("encoder_update_kb index: %d, clockwise: %d\n", index, clockwise);
+
+
     bool res = encoder_update_user(index, clockwise);
 #if !defined(ENCODER_TESTS)
     if (res) {

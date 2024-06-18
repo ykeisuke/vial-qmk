@@ -24,6 +24,7 @@
 #include "action_tapping.h"
 #include "wait.h"
 #include <string.h>
+#include <stdio.h>
 
 #ifdef VIA_ENABLE
 #    include "via.h"
@@ -158,28 +159,94 @@ void dynamic_keymap_set_keycode(uint8_t layer, uint8_t row, uint8_t column, uint
     eeprom_update_byte(address + 1, (uint8_t)(keycode & 0xFF));
 }
 
-#ifdef ENCODER_MAP_ENABLE
+// ここが定義されている必要あり？？
 void *dynamic_keymap_encoder_to_eeprom_address(uint8_t layer, uint8_t encoder_id) {
+
+    // 読み込み時
+    // > d1(4/8) layer: 0, encoder_id: 3, clockwise: 1
+    //    > eep1 address: 0x000001a9, 0, 12
+    // !!!!! これ原因: encoder 3 が 0x000001b5を読みに来るが、その先が0になっている
+
+    // 書き込み時
+    //    > eep1 address: 0x000001a9, 0, 0
+
+
+    // 便利だけど
+    // printf("eep1 address: %p, %d, %d\n", (void *)DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR, (layer * NUM_ENCODERS * 2 * 2), (encoder_id * 2 * 2));
+
     return ((void *)DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR) + (layer * NUM_ENCODERS * 2 * 2) + (encoder_id * 2 * 2);
 }
 
 uint16_t dynamic_keymap_get_encoder(uint8_t layer, uint8_t encoder_id, bool clockwise) {
-    if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT || encoder_id >= NUM_ENCODERS) return KC_NO;
+
+/*
+> encoder_handle_queue.while.ENCODER_MAP_ENABLE index: 7, clockwise: 1
+> dynamic_keymap keycode_at_encodermap_location(4) layer_num: 0, encoder_idx: 3, clockwise: 0
+> dynamic_keymap_get_encoder1(4/8) layer: 0, encoder_id: 3, clockwise: 0
+*/
+
+    //    > d1(4/8) layer: 0, encoder_id: 3, clockwise: 1
+    printf("d1(%d/%d) layer: %d, encoder_id: %d, clockwise: %d\n", DYNAMIC_KEYMAP_LAYER_COUNT, NUM_ENCODERS, layer, encoder_id, clockwise);
+
+//      0           4                            3               8
+    if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT || encoder_id >= NUM_ENCODERS){
+        // printf("encoder_id >= NUM_ENCODERS %d", encoder_id >= NUM_ENCODERS);
+        // printf("layer >= DYNAMIC_KEYMAP_LAYER_COUNT  %d", layer >= DYNAMIC_KEYMAP_LAYER_COUNT );
+        // printf("dynamic_keymap_get_encoder1.a(%d/%d) layer: %d, encoder_id: %d, clockwise: %d, keycode: %d\n", DYNAMIC_KEYMAP_LAYER_COUNT, NUM_ENCODERS, layer, encoder_id, clockwise, KC_NO);
+        return KC_NO;
+    }
+
     void *address = dynamic_keymap_encoder_to_eeprom_address(layer, encoder_id);
     // Big endian, so we can read/write EEPROM directly from host if we want
     uint16_t keycode = ((uint16_t)eeprom_read_byte(address + (clockwise ? 0 : 2))) << 8;
+
+    // printf("d2 keycode: %d address:%p\n", keycode, (void *)address);
+
+
     keycode |= eeprom_read_byte(address + (clockwise ? 0 : 2) + 1);
+
+    printf("d3 keycode: %d address:%p\n", keycode, (void *)address);
+
     return keycode;
 }
 
+
+// 登録がなされない。encoder 0だけが設定される。そのため、encoder 3を読みに来るとだめ
 void dynamic_keymap_set_encoder(uint8_t layer, uint8_t encoder_id, bool clockwise, uint16_t keycode) {
     if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT || encoder_id >= NUM_ENCODERS) return;
     void *address = dynamic_keymap_encoder_to_eeprom_address(layer, encoder_id);
+
+
+    uint16_t k = keycode;
+    if(encoder_id == 3 || encoder_id == 7) {
+
+
+        // これは良い感じ。この修正で、きちんとキーコードが変わって、aしか入力出来なくなる。4 は aのこと。
+//        k = 4; // 上書きしない。
+    }
+
+    //    > s1 keycode: 82 address:0x000001a9
+    // printf("s1 keycode: %d address:%p\n", keycode, (void *)address);
+
     // Big endian, so we can read/write EEPROM directly from host if we want
-    eeprom_update_byte(address + (clockwise ? 0 : 2), (uint8_t)(keycode >> 8));
-    eeprom_update_byte(address + (clockwise ? 0 : 2) + 1, (uint8_t)(keycode & 0xFF));
+    eeprom_update_byte(address + (clockwise ? 0 : 2), (uint8_t)(k >> 8));
+    eeprom_update_byte(address + (clockwise ? 0 : 2) + 1, (uint8_t)(k & 0xFF));
+
+    // 0x000001a9 に登録されているはず...
+    //>     s2(4/8) layer: 0, encoder_id: 0, clockwise: 1, keycode: 82 address:0x000001a9
+    // printf("s2(%d/%d) layer: %d, encoder_id: %d, clockwise: %d, keycode: %d address:%p\n", DYNAMIC_KEYMAP_LAYER_COUNT, NUM_ENCODERS, layer, encoder_id, clockwise, keycode, (void *)address);
+
+    if(encoder_id == 3 || encoder_id == 7) {
+        // 0が登録されている！！！！！！！
+        //    > s2(4/8)   layer: 0,  encoder_id: 3,  clockwise: 1,  keycode: 0  address:0x000001b5
+        //    > s2(4/8)   layer: 0,  encoder_id: 3,  clockwise: 0,  keycode: 0  address:0x000001b5
+        printf("s2(%d/%d) layer: %d, encoder_id: %d, clockwise: %d, keycode: %d address:%p\n", DYNAMIC_KEYMAP_LAYER_COUNT, NUM_ENCODERS, layer, encoder_id, clockwise, k, (void *)address);
+
+    }
+
+
 }
-#endif // ENCODER_MAP_ENABLE
+
 
 #ifdef QMK_SETTINGS
 uint8_t dynamic_keymap_get_qmk_settings(uint16_t offset) {
@@ -279,12 +346,35 @@ void dynamic_keymap_reset(void) {
                 dynamic_keymap_set_keycode(layer, row, column, keycode_at_keymap_location_raw(layer, row, column));
             }
         }
-#ifdef ENCODER_MAP_ENABLE
+
         for (int encoder = 0; encoder < NUM_ENCODERS; encoder++) {
+            printf("rest %d\n", encoder);
+
+/*
+
+
+keycodeが0になっているのでダメ！！！！！
+
+> st 2
+> rest 3
+> s2(4/8) layer: 0, encoder_id: 3, clockwise: 1, keycode: 0 address:0x000001b5
+> s2(4/8) layer: 0, encoder_id: 3, clockwise: 0, keycode: 0 address:0x000001b5
+> rest 4
+> rest 5
+> rest 6
+> rest 7
+> rest 0
+> rest 1
+> rest 2
+> rest 3
+
+
+*/
+
             dynamic_keymap_set_encoder(layer, encoder, true, keycode_at_encodermap_location_raw(layer, encoder, true));
             dynamic_keymap_set_encoder(layer, encoder, false, keycode_at_encodermap_location_raw(layer, encoder, false));
         }
-#endif // ENCODER_MAP_ENABLE
+
     }
 
 #ifdef QMK_SETTINGS
@@ -398,14 +488,15 @@ uint16_t keycode_at_keymap_location(uint8_t layer_num, uint8_t row, uint8_t colu
     return KC_NO;
 }
 
-#ifdef ENCODER_MAP_ENABLE
+// ここが呼ばれる？？？
 uint16_t keycode_at_encodermap_location(uint8_t layer_num, uint8_t encoder_idx, bool clockwise) {
+//    printf("weak location(%d) layer_num: %d, encoder_idx: %d, clockwise: %d\n", DYNAMIC_KEYMAP_LAYER_COUNT, layer_num, encoder_idx, clockwise);
     if (layer_num < DYNAMIC_KEYMAP_LAYER_COUNT && encoder_idx < NUM_ENCODERS) {
         return dynamic_keymap_get_encoder(layer_num, encoder_idx, clockwise);
     }
     return KC_NO;
 }
-#endif // ENCODER_MAP_ENABLE
+
 
 uint8_t dynamic_keymap_macro_get_count(void) {
     return DYNAMIC_KEYMAP_MACRO_COUNT;

@@ -11,6 +11,10 @@
 
 #include "keymap_introspection.h"
 
+
+#include <stdio.h>
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Key mapping
 
@@ -44,7 +48,8 @@ __attribute__((weak)) uint16_t keycode_at_keymap_location(uint8_t layer_num, uin
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Encoder mapping
 
-#if defined(ENCODER_ENABLE) && defined(ENCODER_MAP_ENABLE)
+// ここが動かない構成はありえないので消す
+// defined(ENCODER_ENABLE) && defined(ENCODER_MAP_ENABLE)
 
 #    define NUM_ENCODERMAP_LAYERS_RAW ((uint8_t)(sizeof(encoder_map) / ((NUM_ENCODERS) * (NUM_DIRECTIONS) * sizeof(uint16_t))))
 
@@ -53,23 +58,88 @@ uint8_t encodermap_layer_count_raw(void) {
 }
 
 __attribute__((weak)) uint8_t encodermap_layer_count(void) {
+    printf("keymap_introspection.c encodermap_layer_count %d\n", encodermap_layer_count_raw());
     return encodermap_layer_count_raw();
 }
 
 _Static_assert(NUM_KEYMAP_LAYERS_RAW == NUM_ENCODERMAP_LAYERS_RAW, "Number of encoder_map layers doesn't match the number of keymap layers");
 
 uint16_t keycode_at_encodermap_location_raw(uint8_t layer_num, uint8_t encoder_idx, bool clockwise) {
+
+    // printf("raw(%d) %d %d %d \n", NUM_ENCODERMAP_LAYERS_RAW, layer_num, encoder_idx, clockwise);
+
     if (layer_num < NUM_ENCODERMAP_LAYERS_RAW && encoder_idx < NUM_ENCODERS) {
+
+        // 便利だった。
+        // ここでエンコーダーのキーコードを取得している??? pgm_read_word は2バイト取得している。
+
+
+
+/*
+
+HID console connected: Drop Planck (03A8:A4F9:0007)
+> V
+> raw 0->338
+> ENC QWV
+> raw 0->337
+> rest 1
+> ENC WV
+> raw 1->343
+> ENC V
+> raw 1->342
+> rest 2
+> ENC
+> raw 2->0
+> ENC
+> raw 2->0
+> rest 3
+> ENC
+> raw 3->0
+> s2(4/8) layer: 0, encoder_id: 3, clockwise: 1, keycode: 0 address:0x000001b5
+> ENC
+
+*/
+        printf("ENC %ls\n", &encoder_map[layer_num][encoder_idx][clockwise ? 0 : 1]);
+
+
+
+
+
+        printf("raw %d->%d\n", encoder_idx, pgm_read_word(&encoder_map[layer_num][encoder_idx][clockwise ? 0 : 1]));
+        // ここで 0がとれてしまっているので、ダメ。
+        /* 以下な感じに設定されている
+>  2
+> raw 0
+> raw 0
+> rest 3
+> raw 0
+> s2(4/8) layer: 0, encoder_id: 3, clockwise: 1, keycode: 4 address:0x000001b5
+> raw 0
+> s2(4/8) layer: 0, encoder_id: 3, clockwise: 0, keycode: 4 address:0x000001b5
+        */
+
+
         return pgm_read_word(&encoder_map[layer_num][encoder_idx][clockwise ? 0 : 1]);
     }
+    // printf("raw return KC_TRNS\n");
     return KC_TRNS;
 }
 
 __attribute__((weak)) uint16_t keycode_at_encodermap_location(uint8_t layer_num, uint8_t encoder_idx, bool clockwise) {
+    printf("keycode_at_encodermap_location %d %d %d\n", layer_num, encoder_idx, clockwise);
     return keycode_at_encodermap_location_raw(layer_num, encoder_idx, clockwise);
 }
 
-#endif // defined(ENCODER_ENABLE) && defined(ENCODER_MAP_ENABLE)
+// #endif // defined(ENCODER_ENABLE) && defined(ENCODER_MAP_ENABLE)
+
+
+
+
+
+
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dip Switch mapping

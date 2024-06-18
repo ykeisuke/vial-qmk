@@ -28,7 +28,6 @@ Encoders must have matching pulse & detent resolutions (e.g. 24/24) for the scan
 `-----------------------------------------------------------------------------------'
 ```
 
-If an encoder has a switch built-in, it's connected to the key at that location. On the default keymap, each encoder will play its own rising/falling tone sequence when rotated, and will reset the pitch after one second of inactivity. The encoder map feature is not currently supported.
 
 ## Some Planck-specific config.h options:
 

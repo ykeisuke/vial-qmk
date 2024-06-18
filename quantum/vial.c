@@ -119,7 +119,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             memcpy_P(msg, &keyboard_definition[start], end - start);
             break;
         }
-#ifdef ENCODER_MAP_ENABLE
+// ここか？？
         case vial_get_encoder: {
             uint8_t layer = msg[2];
             uint8_t idx = msg[3];
@@ -135,7 +135,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             dynamic_keymap_set_encoder(msg[2], msg[3], msg[4], vial_keycode_firewall((msg[5] << 8) | msg[6]));
             break;
         }
-#endif
+
         case vial_get_unlock_status: {
             /* Reset message to all FF's */
             memset(msg, 0xFF, length);

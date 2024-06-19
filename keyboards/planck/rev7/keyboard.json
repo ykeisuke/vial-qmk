@@ -29,11 +29,11 @@
         {"pin_a": "B12", "pin_b": "B13"},
         {"pin_a": "B12", "pin_b": "B13"},
         {"pin_a": "B12", "pin_b": "B13"},
+        {"pin_a": "B12", "pin_b": "B13", "resolution": 2},
         {"pin_a": "B12", "pin_b": "B13"},
         {"pin_a": "B12", "pin_b": "B13"},
         {"pin_a": "B12", "pin_b": "B13"},
-        {"pin_a": "B12", "pin_b": "B13"},
-        {"pin_a": "B12", "pin_b": "B13"}
+        {"pin_a": "B12", "pin_b": "B13", "resolution": 2}
     ]
   },
   "features": {
